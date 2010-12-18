@@ -8,68 +8,65 @@ $(function() {
     if(isNaN(val)) fun();
   };
   
-  window.screw_thread_fill_defaults = function(innerRadius,outerRadius,length,lead,angle) {
-    $('#inner_radius').val(innerRadius);
-    $('#outer_radius').val(outerRadius);
-    $('#length').val(length);
-    $('#lead').val(lead);
-    $('#angle').val(angle);
+  window.gewinde_vorgaben_ausfuellen = function(innerRadius,outerRadius,length,lead,angle) {
+    $('#innenradius').val(innerRadius);
+    $('#aussenradius').val(outerRadius);
+    $('#laenge').val(length);
+    $('#steigung').val(lead);
+    $('#oeffnungswinkel').val(angle);
   };
   
-  $('#screw_thread').submit(function(e) {
-    var errors = [];
-    $("#errors").html("");
-    $('#screw_thread input').removeClass("error");
+  $('#gewinde').submit(function(e) {
+    var fehler = [];
+    $("#fehler").html("");
+    $('#gewinde input').removeClass("fehler");
     
-    var inner_radius = parseFloat($('#inner_radius').val());
-    ifNaN(inner_radius, function() {
-      $('#inner_radius').addClass('error');
-      errors.push("Innenradius ist keine gültige Zahl oder fehlt");
+    var innenradius = parseFloat($('#innenradius').val());
+    ifNaN(innenradius, function() {
+      $('#innenradius').addClass('fehler');
+      fehler.push("Innenradius ist keine gültige Zahl oder fehlt");
     });        
-    var outer_radius = parseFloat($('#outer_radius').val());
-    ifNaN(outer_radius, function() {
-      $('#outer_radius').addClass('error');
+    var aussenradius = parseFloat($('#aussenradius').val());
+    ifNaN(aussenradius, function() {
+      $('#aussenradius').addClass('fehler');
       errors.push("Aussenradius ist keine gültige Zahl oder fehlt");
     });    
     var thickness = outer_radius - inner_radius;
     if (thickness <= 0) {
-      $('#outer_radius', '#inner_radius').addClass('error');
+      $('#aussenradius', '#innenradius').addClass('error');
       errors.push("Aussenradius muss größer als Innenradius sein");
     }
 
-    var lead = parseFloat($('#lead').val());
+    var steigung = parseFloat($('#steigung').val());
     ifNaN(lead, function() {
-      $('#lead').addClass('error');
-      errors.push("Steigung ist keine gültige Zahl oder fehlt");
+      $('#steigung').addClass('fehler');
+      fehler.push("Steigung ist keine gültige Zahl oder fehlt");
       
     });
-    var angle = parseFloat($('#angle').val()) / 180 * Math.PI;
-    ifNaN(angle, function() {
-      $('#angle').addClass('error');
-      errors.push("Flankenwinkel ist keine gültige Zahl oder fehlt");
+    var oeffnungswinkel = parseFloat($('#oeffnungswinkel').val()) / 180 * Math.PI;
+    ifNaN(oeffnungswinkel, function() {
+      $('#oeffnungswinkel').addClass('fehler');
+      fehler.push("Flankenwinkel ist keine gültige Zahl oder fehlt");
       
     });
-    var minimumLead = Math.tan(angle/2) * thickness;
-    log("minlead", minimumLead);
-    if (minimumLead > (lead / 2)) {
-      $('#lead', '#outer_radius', '#inner_radius', '#angle').addClass('error');
-      errors.push("Die Werte ergeben kein wohlgeformtes Gewinde");
+    var minimalsteigung = Math.tan(angle/2) * dicke;
+    log("minlead", minimalsteigung);
+    if (minimalsteigung > (lead / 2)) {
+      $('#steigung', '#aussenradius', '#innenradius', '#oeffnungswinkel').addClass('fehler');
+      fehler.push("Die Werte ergeben kein wohlgeformtes Gewinde");
     }
-    if (errors.length > 0) {
-      var errorMarkup = "<ul>";
-      $.each(errors, function(){
-        errorMarkup += ("<li>" + this + "</li>");
+    if (fehler.length > 0) {
+      var fehlerMarkup = "<ul>";
+      $.each(fehler, function(){
+        fehlerMarkup += ("<li>" + this + "</li>");
       });
-      errorMarkup += "</ul>";
-      $("#errors").html(errorMarkup);
+      fehlerMarkup += "</ul>";
+      $("#fehler").html(fehlerMarkup);
       return false;
     } else {
       return true;
     }
     
   });
-  
-  
-  
-  window.location = "skp:screw_thread_fill_defaults@please";
+  window.location = "skp:gewinde_vorgaben_ausfuellen@bitte";
 });
