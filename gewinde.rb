@@ -16,25 +16,32 @@ module JK
       baue_gewinde
     end
     def self.dialog
+      # Webdialog erzeugen
       dialog = UI::WebDialog.new("Gewinde", false, 'gewinde-dialog', 600, 600)
+      # HTML-Datei zuweisen
       dialog.set_file(File.join(File.dirname(__FILE__), 'html', 'gewinde_formular.html'))
+      # Dialog anzeigen
       dialog.show
+      # Callback für das ausfüllen der Vorgabe-Werte
       dialog.add_action_callback("gewinde_vorgaben_ausfuellen") do |dialog, parameter|
         dialog.execute_script("gewinde_vorgaben_ausfuellen(#{10},#{13},#{20},#{4},#{60})")
       end
-      
+      # Callback für Abbrechen
       dialog.add_action_callback("gewinde_abbrechen") do |dialog, parameter|
         dialog.close
       end
       
+      # Callback fürs Erstellen
       dialog.add_action_callback("gewinde_bauen") do |dialog, parameter|
-        
+        # Auslesen der Werte aus dem Formular
         innenradius = dialog.get_element_value("innenradius").to_f
         aussenradius = dialog.get_element_value("aussenradius").to_f
         laenge = dialog.get_element_value("laenge").to_f
         steigung = dialog.get_element_value("steigung").to_f
         oeffnungswinkel = dialog.get_element_value("oeffnungswinkel").to_f
+        # Dialog schliessen
         dialog.close
+        # Gewinde erzeugen
         Gewinde.new(
           innenradius,
           aussenradius, 
@@ -45,54 +52,113 @@ module JK
       end
     end
     
-    def bedingtes_polygon(gitter, pt1, pt2, pt3)
+    # Erzeugt Polygon nur, wenn alle Punkte gesetzt sind
+    def bedingtes_polygon(pt1, pt2, pt3)
       if pt1 && pt2 && pt3
-        gitter.add_polygon(pt1, pt2, pt3)
+        @gitter.add_polygon(pt1, pt2, pt3)
       end
     end
            
+    def gewindepunkt(bedingung, alpha, radius, z)
+      if bedingung
+        @gitter.add_point([Math.cos(alpha) * radius, Math.sin(alpha) * radius, z])
+      else
+        nil
+      end
+    end
+    
+    # Durch die übergebenen Punkte-Arrays gehen und bei den punkten
+    # untere und obere extrema in jeweils ein array stecken,
+    # da diese das gewinde oben und unten abschließen
+    
+    def sammle_start_und_endpunkte(*punkte_arrays)
+      startpunkte = []
+      endpunkte = []
+      
+      punkte_arrays.each do |punkte|
+        punkte.each do |punkte_index|
+          next if punkte_index.nil?
+          punkt = @gitter.point_at(punkte_index)
+          startpunkte.push(punkte_index) if punkt.z == 0
+          endpunkte.unshift(punkte_index) if punkt.z == @laenge
+        end
+      end
+      return [startpunkte, endpunkte]
+    end
+    
+    # Erzeugen der Polygone für die Abschlussflächen des Gewindes
+    def endflaeche(mittelpunkt, punkte)
+      punkte.each_with_index do |punkte_index, i|
+        second_index = (i + 1) % punkte.length
+        @gitter.add_polygon(mittelpunkt, punkte_index, punkte[second_index])
+      end      
+    end
+    
+    def segmentpolygone(pt1, pt2, pt3, pt4)
+      bedingtes_polygon(pt1, pt2, pt3)
+      bedingtes_polygon(pt3, pt4, pt1)
+    end
+    
     def baue_gewinde
       @gitter = Geom::PolygonMesh.new
       
+      # konstanten für die weiteren Berechnungen
+      # Radiale Schrittweite pro Segment
       schrittweite = 2 * Math::PI / 24.0
+      # Schrittweite in Z-Richtung pro segment
       z_schrittweite = @steigung.to_f / 24.0
+      # Dicke des Gewindes
       dicke = @aussenradius - @innenradius
-      z_differenz = dicke / Math::tan(@oeffnungswinkel / 180 * Math::PI)
+
+      # Vorberechnung des Tangens für den Öffnungswinkel
+      tangens = Math::tan(@oeffnungswinkel / 180 * Math::PI)
+
+      # Differenz in Z-Richtung zwischen inneren und äusseren Punkten des
+      # Gewindes
+      z_differenz = dicke / tangens
+      # Dicke des Stegs des Gewindes
       z_steg = @steigung - z_differenz
-      
-      
-      
+
+      # zähler (der einfachheit halber bei -1 anfangend)
       i = -1
+      # Arrays für die Punkte der drei reihen
       innere_punkte = []
       obere_punkte = []
       untere_punkte = []
+
+      # Startposition Z
       z = - (@steigung * 2)
-      
-      
-      
-      
       while z < (@laenge + (@steigung * 2))
-        
+
+        # Weiterzählen
         i += 1
         z += z_schrittweite 
         
+        # Winkel
         alpha = schrittweite * i
+        # Abspeichern der Radien um sie gleich für die Enden
+        # des Gewindes korrigieren zu können
         oberer_radius = @innenradius + dicke
         unterer_radius = @innenradius + dicke
         innenradius = @innenradius
         
-        tangens = Math::tan(@oeffnungswinkel / 180 * Math::PI)
 
+        # Z-Positionen der Punkte, noch ohne Korrektur für
+        # die Enden des Gewindes
+        
         z_unten = z - z_differenz
         z_oben  = z + z_differenz        
         z_mitte = z
 
+        # Überspringen des Schritts, wenn Punkt unten oder oben aus dem Gewinde
+        # "herausfällt"
         if z < 0 && z_oben < 0 && z_unten < 0 && z_unten + (z_differenz * 24) < 0
           next
         end
-
-
-
+        
+        # Korrektur der Punkte für oberen und unteren Gewinderand
+        
+        # Unten
         if z_unten < 0
           z_unten = 0
           unterer_radius = @innenradius + ((z - z_unten) * tangens)
@@ -101,6 +167,7 @@ module JK
           z_unten = @laenge
         end
 
+        # Oben
         if z_oben > @laenge
           z_oben = @laenge
           oberer_radius = @innenradius + ((z_oben - z) * tangens)
@@ -110,7 +177,7 @@ module JK
           z_oben = 0
         end
         
-        # mitte
+        # Mitte
         if z_mitte > @laenge
           z_mitte = @laenge
           innenradius = @innenradius + ((z_differenz - (z_mitte - z_unten)) * tangens)
@@ -119,143 +186,99 @@ module JK
         if z_mitte < 0
           z_mitte = 0
           innenradius = @innenradius + ((z_differenz - z_oben) * tangens)
-        
         end
         
-        # adding points
-        puts "#{innenradius}"
-        if z_unten <= z_mitte && z_oben >= z_mitte && z_unten < @laenge && z_oben > 0 && innenradius >= @innenradius
-          innere_punkte << gitter.add_point([Math.cos(alpha) * innenradius, Math.sin(alpha) * innenradius, z_mitte ])
-        else
-          innere_punkte << nil
-        end
-         #puts (z + z_steg)
-        if z_mitte <= @laenge && (z + z_steg) >= 0 && oberer_radius >= @innenradius
-          obere_punkte << gitter.add_point([Math.cos(alpha) * oberer_radius, Math.sin(alpha) * oberer_radius, z_oben ])
-        else
-          obere_punkte << nil
-        end
-        
-        if z_mitte >= 0 && (z + z_differenz - (z_schrittweite * 24)) <= @laenge && unterer_radius >= @innenradius
-          #puts "#{unterer_radius} - #{@innenradius}"
-          untere_punkte << gitter.add_point([Math.cos(alpha) * unterer_radius, Math.sin(alpha) * unterer_radius, z_unten ])
-        else
-          untere_punkte << nil
-        end
-        
-        # outer_points << mesh.add_point([Math.sin(alpha) * @outer_radius, Math.cos(alpha) * @outer_radius, z ])
-        # inner_points_top << mesh.add_point([Math.sin(alpha) * @inner_radius, Math.cos(alpha) * @inner_radius, z_top])
-        # inner_points_bottom << mesh.add_point([Math.sin(alpha) * @inner_radius, Math.cos(alpha) * @inner_radius, z_bottom])
-        
-        
-        # Punkte um den Zylinder zu schließen
-        startpunkt = gitter.add_point([0,0,0])
-        endpunkt = gitter.add_point([0,0,@laenge])
-       
+        # Punkte hinzufügen
+        # Innere Punkte
+        innere_punkte << gewindepunkt(
+          z_unten <= z_mitte && z_oben >= z_mitte && z_unten < @laenge && z_oben > 0 && innenradius >= @innenradius,
+          alpha,
+          innenradius,
+          z_mitte
+        )
+        obere_punkte << gewindepunkt(
+          z_mitte <= @laenge && (z + z_steg) >= 0 && oberer_radius >= @innenradius,
+          alpha,
+          oberer_radius,
+          z_oben
+        )
+        untere_punkte << gewindepunkt(
+          z_mitte >= 0 && (z + z_differenz - (z_schrittweite * 24)) <= @laenge && unterer_radius >= @innenradius,
+          alpha,
+          unterer_radius,
+          z_unten
+        )
       end
+
+      # Punkte um den Zylinder zu schließen
+      startmittelpunkt = @gitter.add_point([0,0,0])
+      endmittelpunkt = @gitter.add_point([0,0,@laenge])
       
       # Flaechen zeichnen
       
       (innere_punkte.length - 1).times do |i|
-        # untere flaeche
-        bedingtes_polygon(
-          gitter, 
-          innere_punkte[i], 
-          obere_punkte[i], 
-          innere_punkte[i+1]
-        )
-        bedingtes_polygon(
-          gitter,
+        
+        segmentpolygone(
+          obere_punkte[i],
+          obere_punkte[i+1],
           innere_punkte[i+1],
-          obere_punkte[i], 
-          obere_punkte[i+1]
-        )
-        # obere flaeche
-        bedingtes_polygon(
-          gitter,
-          innere_punkte[i], 
-          innere_punkte[i+1],
-          untere_punkte[i+1]
-          
+          innere_punkte[i]          
         )        
-        bedingtes_polygon(
-          gitter,
-          untere_punkte[i+1],
-          untere_punkte[i],
-          innere_punkte[i]
-        )
-        # aussenflaeche
-        bedingtes_polygon(
-          gitter,
+        segmentpolygone(
+          innere_punkte[i], 
+          innere_punkte[i + 1],
+          untere_punkte[i + 1], 
+          untere_punkte[i]
+        )                
+        segmentpolygone(
           untere_punkte[i], 
           untere_punkte[i + 1],
-          obere_punkte[i - 23]        
-        )
-        bedingtes_polygon(
-          gitter,
           obere_punkte[i - 23], 
-          obere_punkte[i - 24],
-          untere_punkte[i]
+          obere_punkte[i - 24]
         )
       end
-      
-      # Endpunkte suchen und mit Mittelpunkt verbinden
-     
-      startpunkte = []
-      endpunkte = []
       
       # In der richtigen reihenfolge die Punkte der reihen durchgehen
       # und untere und obere extrema in jeweils ein array stecken
-      innere_punkte.each do |punkte_index|
-        next if punkte_index.nil?
-        punkt = gitter.point_at(punkte_index)
-        startpunkte.push(punkte_index) if punkt.z == 0
-        endpunkte.unshift(punkte_index) if punkt.z == @laenge
-      end
-      untere_punkte.each do |punkte_index|
-        next if punkte_index.nil?
-        punkt = gitter.point_at(punkte_index)
-        startpunkte.push(punkte_index) if punkt.z == 0
-        endpunkte.unshift(punkte_index) if punkt.z == @laenge
-      end
-      obere_punkte.each do |punkte_index|
-        next if punkte_index.nil?
-        punkt = gitter.point_at(punkte_index)
-        startpunkte.push(punkte_index) if punkt.z == 0
-        endpunkte.unshift(punkte_index) if punkt.z == @laenge
-      end
+     
+      startpunkte, endpunkte = sammle_start_und_endpunkte(innere_punkte, untere_punkte, obere_punkte)
       
-      # r
+      # Start- und Endpunkte mit den Oberen und unteren Mittelpunkten des
+      # Inneren Zylinders verbinden
       
-      startpunkte.each_with_index do |punkte_index, i|
-        second_index = (i + 1) % startpunkte.length
-        gitter.add_polygon(startpunkt, punkte_index, startpunkte[second_index])
-      end
-      endpunkte.each_with_index do |punkte_index, i|
-        second_index = (i + 1) % endpunkte.length
-        gitter.add_polygon(endpunkt, punkte_index, endpunkte[second_index])
-      end
+      endflaeche(startmittelpunkt, startpunkte)
+      endflaeche(endmittelpunkt, endpunkte)
       
-      @definition.entities.add_faces_from_mesh(gitter, 0)
-      
+      # Aus dem Mesh die Flächen erzeugen und zu der Komponentendefinition
+      # hinzufügen
+      @definition.entities.add_faces_from_mesh(@gitter, 0)
       
     end
     
     def place_component
+      # Komponente durch den Benutzer platzieren lassen
       modell.place_component @definition
     end
-    
-   
-    
   end
 end
 
-# JK::ScrewThread.new(20,22, 100, 5, 60)
-
 unless file_loaded? File.basename(__FILE__) 
-  UI.menu("Plug-Ins").add_item("Gewinde") do 
-    JK::Gewinde.dialog
+  # ein Toolbar-Icon wird durch UI::Command definiert
+  cmd = UI::Command.new("Gewinde") do
+   JK::Gewinde.dialog
   end
+  # zwei Bilder für große und kleine Toolbar-Icons
+  cmd.small_icon = File.join(File.dirname(__FILE__),'bilder','gewinde_klein.png')
+  cmd.large_icon = File.join(File.dirname(__FILE__),'bilder','gewinde.png')
+
+  # neue Toolbar für die Icons erzeugen
+  toolbar = UI::Toolbar.new "Formen"
+  # Icons hinzufügen
+  toolbar = toolbar.add_item cmd
+  # Toolbar anzeigen  (ist über das Ansicht-Menü 
+  # "Funktionspaletten" (Mac) oder "Symbolleisten" (Windows)
+  # von Hand ein- und ausblendbar)
+  toolbar.show
 end
 
 file_loaded File.basename(__FILE__) 
