@@ -13,7 +13,6 @@ module JK
       @definition = modell.definitions.add "Gewinde"
   		@definition.insertion_point = Geom::Point3d.new(0, 0, 0)
   		
-      baue_zylinder
       baue_gewinde
     end
     def self.dialog
@@ -45,20 +44,23 @@ module JK
         ).place_component
       end
     end
-        
-    def baue_zylinder
-      kreis = @definition.entities.add_circle([0,0,0], [0,0,1], @innenradius, 24)
-      flaeche = @definition.entities.add_face kreis
-      flaeche.pushpull(-@laenge)
+    
+    def bedingtes_polygon(gitter, pt1, pt2, pt3)
+      if pt1 && pt2 && pt3
+        gitter.add_polygon(pt1, pt2, pt3)
+      end
     end
-   
+           
     def baue_gewinde
+      @gitter = Geom::PolygonMesh.new
+      
       schrittweite = 2 * Math::PI / 24.0
       z_schrittweite = @steigung.to_f / 24.0
       dicke = @aussenradius - @innenradius
       z_differenz = dicke / Math::tan(@oeffnungswinkel / 180 * Math::PI)
+      z_steg = @steigung - z_differenz
       
-      gitter = Geom::PolygonMesh.new
+      
       
       i = -1
       innere_punkte = []
@@ -77,7 +79,7 @@ module JK
         alpha = schrittweite * i
         oberer_radius = @innenradius + dicke
         unterer_radius = @innenradius + dicke
-        inner_radius = @innenradius
+        innenradius = @innenradius
         
         tangens = Math::tan(@oeffnungswinkel / 180 * Math::PI)
 
@@ -86,7 +88,6 @@ module JK
         z_mitte = z
 
         if z < 0 && z_oben < 0 && z_unten < 0 && z_unten + (z_differenz * 24) < 0
-          puts "alles < null"
           next
         end
 
@@ -113,7 +114,6 @@ module JK
         if z_mitte > @laenge
           z_mitte = @laenge
           innenradius = @innenradius + ((z_differenz - (z_mitte - z_unten)) * tangens)
-          puts(z_differenz - (z_mitte - z_unten))
         end
         
         if z_mitte < 0
@@ -123,17 +123,21 @@ module JK
         end
         
         # adding points
-        if z_unten <= z_mitte && z_oben >= z_mitte && z_unten < @laenge && z_oben > 0
+        puts "#{innenradius}"
+        if z_unten <= z_mitte && z_oben >= z_mitte && z_unten < @laenge && z_oben > 0 && innenradius >= @innenradius
           innere_punkte << gitter.add_point([Math.cos(alpha) * innenradius, Math.sin(alpha) * innenradius, z_mitte ])
         else
           innere_punkte << nil
         end
-        if z_mitte <= @laenge && z_oben != z_unten
+         #puts (z + z_steg)
+        if z_mitte <= @laenge && (z + z_steg) >= 0 && oberer_radius >= @innenradius
           obere_punkte << gitter.add_point([Math.cos(alpha) * oberer_radius, Math.sin(alpha) * oberer_radius, z_oben ])
         else
           obere_punkte << nil
         end
-        if z_mitte >= 0 && (z + z_differenz - (z_schrittweite * 25)) <= @laenge 
+        
+        if z_mitte >= 0 && (z + z_differenz - (z_schrittweite * 24)) <= @laenge && unterer_radius >= @innenradius
+          #puts "#{unterer_radius} - #{@innenradius}"
           untere_punkte << gitter.add_point([Math.cos(alpha) * unterer_radius, Math.sin(alpha) * unterer_radius, z_unten ])
         else
           untere_punkte << nil
@@ -143,55 +147,94 @@ module JK
         # inner_points_top << mesh.add_point([Math.sin(alpha) * @inner_radius, Math.cos(alpha) * @inner_radius, z_top])
         # inner_points_bottom << mesh.add_point([Math.sin(alpha) * @inner_radius, Math.cos(alpha) * @inner_radius, z_bottom])
         
+        
+        # Punkte um den Zylinder zu schließen
+        startpunkt = gitter.add_point([0,0,0])
+        endpunkt = gitter.add_point([0,0,@laenge])
        
       end
       
       # Flaechen zeichnen
       
       (innere_punkte.length - 1).times do |i|
-        if (innere_punkte[i] && obere_punkte[i] && innere_punkte[i + 1] && obere_punkte[i + 1])
-          gitter.add_polygon([
-            innere_punkte[i], 
-            obere_punkte[i], 
-            innere_punkte[i+1]
-          ])
-          gitter.add_polygon([
-            innere_punkte[i+1],
-            obere_punkte[i], 
-            obere_punkte[i+1]
-          ])
-        end
-        if (innere_punkte[i] && untere_punkte[i] && innere_punkte[i+1] && untere_punkte[i+1])
-          gitter.add_polygon([
-            innere_punkte[i], 
-            innere_punkte[i+1],
-            untere_punkte[i]
+        # untere flaeche
+        bedingtes_polygon(
+          gitter, 
+          innere_punkte[i], 
+          obere_punkte[i], 
+          innere_punkte[i+1]
+        )
+        bedingtes_polygon(
+          gitter,
+          innere_punkte[i+1],
+          obere_punkte[i], 
+          obere_punkte[i+1]
+        )
+        # obere flaeche
+        bedingtes_polygon(
+          gitter,
+          innere_punkte[i], 
+          innere_punkte[i+1],
+          untere_punkte[i+1]
           
-          ])
-          gitter.add_polygon([
-            innere_punkte[i+1],
-            untere_punkte[i+1],
-            untere_punkte[i]
-          ])    
-        end
-        if untere_punkte[i] && obere_punkte[i - 24] && untere_punkte[i+1] && obere_punkte [i - 23]
-          gitter.add_polygon([
-            untere_punkte[i], 
-            untere_punkte[i + 1],
-            obere_punkte[i - 24]
-            
-          ])
-          gitter.add_polygon([
-            untere_punkte[i + 1],
-            obere_punkte[i - 23], 
-            obere_punkte[i - 24]
-          ])        
-        end
+        )        
+        bedingtes_polygon(
+          gitter,
+          untere_punkte[i+1],
+          untere_punkte[i],
+          innere_punkte[i]
+        )
+        # aussenflaeche
+        bedingtes_polygon(
+          gitter,
+          untere_punkte[i], 
+          untere_punkte[i + 1],
+          obere_punkte[i - 23]        
+        )
+        bedingtes_polygon(
+          gitter,
+          obere_punkte[i - 23], 
+          obere_punkte[i - 24],
+          untere_punkte[i]
+        )
       end
       
+      # Endpunkte suchen und mit Mittelpunkt verbinden
      
+      startpunkte = []
+      endpunkte = []
       
+      # In der richtigen reihenfolge die Punkte der reihen durchgehen
+      # und untere und obere extrema in jeweils ein array stecken
+      innere_punkte.each do |punkte_index|
+        next if punkte_index.nil?
+        punkt = gitter.point_at(punkte_index)
+        startpunkte.push(punkte_index) if punkt.z == 0
+        endpunkte.unshift(punkte_index) if punkt.z == @laenge
+      end
+      untere_punkte.each do |punkte_index|
+        next if punkte_index.nil?
+        punkt = gitter.point_at(punkte_index)
+        startpunkte.push(punkte_index) if punkt.z == 0
+        endpunkte.unshift(punkte_index) if punkt.z == @laenge
+      end
+      obere_punkte.each do |punkte_index|
+        next if punkte_index.nil?
+        punkt = gitter.point_at(punkte_index)
+        startpunkte.push(punkte_index) if punkt.z == 0
+        endpunkte.unshift(punkte_index) if punkt.z == @laenge
+      end
       
+      # r
+      
+      startpunkte.each_with_index do |punkte_index, i|
+        second_index = (i + 1) % startpunkte.length
+        gitter.add_polygon(startpunkt, punkte_index, startpunkte[second_index])
+      end
+      endpunkte.each_with_index do |punkte_index, i|
+        second_index = (i + 1) % endpunkte.length
+        gitter.add_polygon(endpunkt, punkte_index, endpunkte[second_index])
+      end
       
       @definition.entities.add_faces_from_mesh(gitter, 0)
       
