@@ -9,12 +9,12 @@ module JK
     def self.dialog
       # Beschriftung der Dialogfelder
       namen = ['Radius (in cm)', 'Anzahl Segmente']
-      # Vorgaben
+      # Vorgabewerte
       werte = [20, 10]
       # Werte werden als Array zurückgegeben 
       # und in der folgenden Zeile aufgelöst
       radius, segmente = UI.inputbox namen, werte, "Kugel"
-      # Erzeugen der Komponentendefinition und Platzieren einer Instanz
+      # Komponentendefinition erzeugen und Instanz platzieren
       Kugel.new(radius.cm, segmente).komponente_platzieren
     end
     
@@ -22,8 +22,10 @@ module JK
     def initialize(radius, segmente)
       # Parameter in Instanzvariablen speichern
       @radius = radius
-      # Funktioniert nur mit gerader Anzahl von Segmenten, daher mal 2
-      @segmente = segmente * 2
+      # Zahl horizontaler Reihen entspricht der Segmentzahl
+	  @reihen = segmente
+	  # Zahl vertikaler Spalten entspricht doppelter Segmentzahl
+      @spalten = segmente * 2
       # Komponentendefinition erzeugen
       @definition = Sketchup.active_model.definitions.add "Kugel"
       # Punkt, an dem der Körper platziert wird 
@@ -36,8 +38,8 @@ module JK
     end
     
     def komponente_platzieren
-      # place_component lässt den Benutzer die Komponenten-Instanz
-      # frei mit der Maus im Raum platzieren
+      # Methode place_component lässt den Benutzer 
+	  # die Komponenten-Instanz frei mit der Maus im Raum platzieren
       modell.place_component @definition
     end
     
@@ -47,11 +49,9 @@ module JK
     def punkte_fuer_kugel
       # alle Reihen und Spalten (Breiten- und Längengrade) durchgehen 
       # und je einen Punkt erzeugen
-      reihen = @segmente / 2
-      # Pole sind keine Reihen, sondern werden später 
-      # separat hinzugefügt
-      (1...(reihen)).to_a.map do |reihe|
-        (0...@segmente).to_a.map do |spalte|
+      # Pole sind keine Reihen, sondern werden später separat hinzugefügt
+      (1...@reihen).to_a.map do |reihe|
+        (0...@spalten).to_a.map do |spalte|
           punkt_fuer(reihe, spalte)
         end
       end      
@@ -61,7 +61,7 @@ module JK
     # für den Schnittpunkt der Breiten- und Längengrade 
     # an der angegebenen Position
     def punkt_fuer(reihe, spalte)
-      schrittweite = 2 * Math::PI / @segmente
+      schrittweite = 2 * Math::PI / @spalten
       [
         @radius * Math.cos(schrittweite * spalte) * Math.sin(schrittweite * reihe), 
         @radius * Math.sin(schrittweite * spalte) * Math.sin(schrittweite * reihe), 
@@ -73,9 +73,9 @@ module JK
       # Die Punkte an den Positionen spalte und spalte -1
       # der obersten und der untersten Reihe werden jeweils 
       # mit dem Nord- oder Südpol zu einem Dreieck verbunden, 
-      #  bei allen anderen Reihen entstehen Vierecke zwischen 
+      # bei allen anderen Reihen entstehen Vierecke zwischen 
       # reihe und reihe+1 sowie spalte-1 und spalte.
-      @segmente.times do |spalte|
+      @spalten.times do |spalte|
         # oben:
         @definition.entities.add_face([
           [0,0,@radius], 
