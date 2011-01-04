@@ -46,10 +46,10 @@ module JK
         dialog.close
         # Gewinde erzeugen
         Gewinde.new(
-          innenradius,
-          aussenradius, 
-          laenge, 
-          steigung, 
+          innenradius.cm,
+          aussenradius.cm, 
+          laenge.cm, 
+          steigung.cm, 
           oeffnungswinkel
         ).place_component
       end
@@ -69,6 +69,7 @@ module JK
         nil
       end
     end
+    
     
     # Durch die übergebenen Punkte-Arrays gehen und bei den punkten
     # untere und obere extrema in jeweils ein array stecken,
@@ -101,10 +102,38 @@ module JK
       bedingtes_polygon(pt1, pt2, pt3)
       bedingtes_polygon(pt3, pt4, pt1)
     end
+
+    # Zeichnen der Flächen
+    def gewindeflaechen(innere_punkte, untere_punkte, obere_punkte)
+      (innere_punkte.length - 1).times do |i|
+
+        segmentpolygone(
+          obere_punkte[i],
+          obere_punkte[i+1],
+          innere_punkte[i+1],
+          innere_punkte[i]          
+        )        
+        segmentpolygone(
+          innere_punkte[i], 
+          innere_punkte[i + 1],
+          untere_punkte[i + 1], 
+          untere_punkte[i]
+        )                
+        segmentpolygone(
+          untere_punkte[i], 
+          untere_punkte[i + 1],
+          obere_punkte[i - (ANZAHL_SEGMENTE - 1)], 
+          obere_punkte[i - ANZAHL_SEGMENTE]
+        )
+      end
+    end
+
+    # Diese Methode ist natürlich eigentlich viel zu lang.
+    # Allerdings sind so viele Laufvariablen im Spiel,
+    # dass ein Refactoring in kleine, übersichtliche
+    # Methoden sehr schwierig ist. 
     
-    def baue_gewinde
-      @gitter = Geom::PolygonMesh.new
-      
+    def gewindepunkte
       # konstanten für die weiteren Berechnungen
       # Radiale Schrittweite pro Segment
       schrittweite = 2 * Math::PI / ANZAHL_SEGMENTE
@@ -114,16 +143,13 @@ module JK
       dicke = @aussenradius - @innenradius
       
       @einzelwinkel = (Math::PI / 2) - (@oeffnungswinkel / 360 * Math::PI)
-      puts @einzelwinkel
       # Vorberechnung des Tangens für den Öffnungswinkel
       @tangens = Math::tan(@einzelwinkel)
 
       # Differenz in Z-Richtung zwischen inneren und äusseren Punkten des
       # Gewindes
       z_differenz = dicke / @tangens
-      
-      puts z_differenz
-      
+            
       # Dicke des Stegs des Gewindes
       z_steg = @steigung - z_differenz
 
@@ -217,45 +243,21 @@ module JK
           z_unten
         )
       end
-
+      [innere_punkte, untere_punkte, obere_punkte]
+    end
+    
+    def baue_gewinde
+      @gitter = Geom::PolygonMesh.new
+      innere_punkte, untere_punkte, obere_punkte = gewindepunkte
       # Punkte um den Zylinder zu schließen
       startmittelpunkt = @gitter.add_point([0,0,0])
       endmittelpunkt = @gitter.add_point([0,0,@laenge])
-      
-      # Flaechen zeichnen
-      
-      (innere_punkte.length - 1).times do |i|
-        
-        segmentpolygone(
-          obere_punkte[i],
-          obere_punkte[i+1],
-          innere_punkte[i+1],
-          innere_punkte[i]          
-        )        
-        segmentpolygone(
-          innere_punkte[i], 
-          innere_punkte[i + 1],
-          untere_punkte[i + 1], 
-          untere_punkte[i]
-        )                
-        segmentpolygone(
-          untere_punkte[i], 
-          untere_punkte[i + 1],
-          obere_punkte[i - (ANZAHL_SEGMENTE - 1)], 
-          obere_punkte[i - ANZAHL_SEGMENTE]
-        )
-      end
-      
-      # In der richtigen reihenfolge die Punkte der reihen durchgehen
-      # und untere und obere extrema in jeweils ein array stecken
-     
       startpunkte, endpunkte = sammle_start_und_endpunkte(innere_punkte, untere_punkte, obere_punkte)
-      
-      # Start- und Endpunkte mit den Oberen und unteren Mittelpunkten des
-      # Inneren Zylinders verbinden
-      
+    
+      # Flaechen zeichnen
+      gewindeflaechen(innere_punkte, untere_punkte, obere_punkte)
       endflaeche(startmittelpunkt, startpunkte)
-      endflaeche(endmittelpunkt, endpunkte)
+      endflaeche(endmittelpunkt, endpunkte)        
       
       # Aus dem Mesh die Flächen erzeugen und zu der Komponentendefinition
       # hinzufügen
