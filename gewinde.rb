@@ -2,6 +2,9 @@ require 'sketchup'
 require 'werkzeuge'
 module JK
   class Gewinde
+    
+    ANZAHL_SEGMENTE = 36.0
+    
     include JK::Werkzeuge
     def initialize(innenradius, aussenradius, laenge, steigung, oeffnungswinkel)
       @innenradius = innenradius.to_f
@@ -104,18 +107,23 @@ module JK
       
       # konstanten für die weiteren Berechnungen
       # Radiale Schrittweite pro Segment
-      schrittweite = 2 * Math::PI / 24.0
+      schrittweite = 2 * Math::PI / ANZAHL_SEGMENTE
       # Schrittweite in Z-Richtung pro segment
-      z_schrittweite = @steigung.to_f / 24.0
+      z_schrittweite = @steigung.to_f / ANZAHL_SEGMENTE
       # Dicke des Gewindes
       dicke = @aussenradius - @innenradius
-
+      
+      @einzelwinkel = (Math::PI / 2) - (@oeffnungswinkel / 360 * Math::PI)
+      puts @einzelwinkel
       # Vorberechnung des Tangens für den Öffnungswinkel
-      tangens = Math::tan(@oeffnungswinkel / 180 * Math::PI)
+      @tangens = Math::tan(@einzelwinkel)
 
       # Differenz in Z-Richtung zwischen inneren und äusseren Punkten des
       # Gewindes
-      z_differenz = dicke / tangens
+      z_differenz = dicke / @tangens
+      
+      puts z_differenz
+      
       # Dicke des Stegs des Gewindes
       z_steg = @steigung - z_differenz
 
@@ -152,7 +160,7 @@ module JK
 
         # Überspringen des Schritts, wenn Punkt unten oder oben aus dem Gewinde
         # "herausfällt"
-        if z < 0 && z_oben < 0 && z_unten < 0 && z_unten + (z_differenz * 24) < 0
+        if z < 0 && z_oben < 0 && z_unten < 0 && z_unten + (z_differenz * ANZAHL_SEGMENTE) < 0
           next
         end
         
@@ -161,7 +169,7 @@ module JK
         # Unten
         if z_unten < 0
           z_unten = 0
-          unterer_radius = @innenradius + ((z - z_unten) * tangens)
+          unterer_radius = @innenradius + ((z - z_unten) * @tangens)
         end
         if z_unten > @laenge
           z_unten = @laenge
@@ -170,7 +178,7 @@ module JK
         # Oben
         if z_oben > @laenge
           z_oben = @laenge
-          oberer_radius = @innenradius + ((z_oben - z) * tangens)
+          oberer_radius = @innenradius + ((z_oben - z) * @tangens)
         end
 
         if z_oben < 0
@@ -180,12 +188,12 @@ module JK
         # Mitte
         if z_mitte > @laenge
           z_mitte = @laenge
-          innenradius = @innenradius + ((z_differenz - (z_mitte - z_unten)) * tangens)
+          innenradius = @innenradius + ((z_differenz - (z_mitte - z_unten)) * @tangens)
         end
         
         if z_mitte < 0
           z_mitte = 0
-          innenradius = @innenradius + ((z_differenz - z_oben) * tangens)
+          innenradius = @innenradius + ((z_differenz - z_oben) * @tangens)
         end
         
         # Punkte hinzufügen
@@ -203,7 +211,7 @@ module JK
           z_oben
         )
         untere_punkte << gewindepunkt(
-          z_mitte >= 0 && (z + z_differenz - (z_schrittweite * 24)) <= @laenge && unterer_radius >= @innenradius,
+          z_mitte >= 0 && (z + z_differenz - (z_schrittweite * ANZAHL_SEGMENTE)) <= @laenge && unterer_radius >= @innenradius,
           alpha,
           unterer_radius,
           z_unten
@@ -233,8 +241,8 @@ module JK
         segmentpolygone(
           untere_punkte[i], 
           untere_punkte[i + 1],
-          obere_punkte[i - 23], 
-          obere_punkte[i - 24]
+          obere_punkte[i - (ANZAHL_SEGMENTE - 1)], 
+          obere_punkte[i - ANZAHL_SEGMENTE]
         )
       end
       

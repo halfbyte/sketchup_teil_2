@@ -3,6 +3,7 @@ $(function() {
   var log = function(string, text) {
     $('#debug')[0].value += (string + ": " + text + "\n");
   };
+  $('#debug').show();
   
   var ifNaN = function(val, fun) {
     if(isNaN(val)) fun();
@@ -29,29 +30,32 @@ $(function() {
     var aussenradius = parseFloat($('#aussenradius').val());
     ifNaN(aussenradius, function() {
       $('#aussenradius').addClass('fehler');
-      errors.push("Aussenradius ist keine gültige Zahl oder fehlt");
+      fehler.push("Aussenradius ist keine gültige Zahl oder fehlt");
     });    
-    var thickness = outer_radius - inner_radius;
-    if (thickness <= 0) {
+    var dicke = parseFloat($('#aussenradius').val()) - parseFloat($('#innenradius').val());
+    if (dicke <= 0) {
       $('#aussenradius', '#innenradius').addClass('error');
-      errors.push("Aussenradius muss größer als Innenradius sein");
+      fehler.push("Aussenradius muss größer als Innenradius sein");
     }
 
     var steigung = parseFloat($('#steigung').val());
-    ifNaN(lead, function() {
+    ifNaN(steigung, function() {
       $('#steigung').addClass('fehler');
       fehler.push("Steigung ist keine gültige Zahl oder fehlt");
       
     });
-    var oeffnungswinkel = parseFloat($('#oeffnungswinkel').val()) / 180 * Math.PI;
+    var oeffnungswinkel = (parseFloat($('#oeffnungswinkel').val()) / 180) * Math.PI;
     ifNaN(oeffnungswinkel, function() {
       $('#oeffnungswinkel').addClass('fehler');
       fehler.push("Flankenwinkel ist keine gültige Zahl oder fehlt");
       
     });
-    var minimalsteigung = Math.tan(angle/2) * dicke;
+    log("angle", oeffnungswinkel);
+    var beta = (Math.PI / 2) - (oeffnungswinkel / 2 );
+    log("beta", beta);
+    var minimalsteigung = dicke / Math.tan((Math.PI / 2) - (oeffnungswinkel / 2 ));
     log("minlead", minimalsteigung);
-    if (minimalsteigung > (lead / 2)) {
+    if (minimalsteigung > (steigung / 2)) {
       $('#steigung', '#aussenradius', '#innenradius', '#oeffnungswinkel').addClass('fehler');
       fehler.push("Die Werte ergeben kein wohlgeformtes Gewinde");
     }
