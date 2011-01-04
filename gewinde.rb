@@ -3,7 +3,7 @@ require 'werkzeuge'
 module Formen
   class Gewinde
     
-    ANZAHL_SEGMENTE = 36.0
+    ANZAHL_SEGMENTE = 24.0
     
     include Formen::Werkzeuge
     def initialize(innenradius, aussenradius, laenge, steigung, oeffnungswinkel)
