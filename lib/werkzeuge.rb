@@ -1,4 +1,4 @@
-module JK
+module Formen
   module Werkzeuge
     def gruppe_aus_auswahl
       if modell.selection.length > 1

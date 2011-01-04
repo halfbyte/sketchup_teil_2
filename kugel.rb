@@ -1,10 +1,10 @@
 require 'sketchup'
 require 'werkzeuge'
 
-module JK
+module Formen
   class Kugel
     # Methoden aus lib/werkzeuge.rb einfügen
-    include JK::Werkzeuge
+    include Formen::Werkzeuge
     
     def self.dialog
       # Beschriftung der Dialogfelder
@@ -105,7 +105,7 @@ end
 unless file_loaded? File.basename(__FILE__)
   # ein Toolbar-Icon wird durch UI::Command definiert
   cmd = UI::Command.new("Kugel") do
-    JK::Kugel.dialog
+    Formen::Kugel.dialog
   end
   # zwei Bilder für große und kleine Toolbar-Icons
   cmd.small_icon = File.join(File.dirname(__FILE__),'bilder','kugel_klein.png')

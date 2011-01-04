@@ -1,11 +1,11 @@
 require 'sketchup'
 require 'werkzeuge'
-module JK
+module Formen
   class Gewinde
     
     ANZAHL_SEGMENTE = 36.0
     
-    include JK::Werkzeuge
+    include Formen::Werkzeuge
     def initialize(innenradius, aussenradius, laenge, steigung, oeffnungswinkel)
       @innenradius = innenradius.to_f
       @aussenradius = aussenradius.to_f
@@ -275,7 +275,7 @@ end
 unless file_loaded? File.basename(__FILE__) 
   # ein Toolbar-Icon wird durch UI::Command definiert
   cmd = UI::Command.new("Gewinde") do
-   JK::Gewinde.dialog
+   Formen::Gewinde.dialog
   end
   # zwei Bilder für große und kleine Toolbar-Icons
   cmd.small_icon = File.join(File.dirname(__FILE__),'bilder','gewinde_klein.png')

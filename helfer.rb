@@ -1,5 +1,5 @@
 require 'sketchup'
-module JK
+module Formen
   module BeispielHelfer
     include Sketchup
     def self.neu_laden!
@@ -14,7 +14,7 @@ end
 unless file_loaded? File.basename(__FILE__)
   UI.menu("Plug-Ins").add_separator
   UI.menu("Plug-Ins").add_item("Beispiele neu laden") do
-    JK::BeispielHelfer::neu_laden!
+    Formen::BeispielHelfer::neu_laden!
   end
 end
 file_loaded File.basename(__FILE__)
