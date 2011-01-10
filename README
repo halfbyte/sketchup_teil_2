@@ -21,11 +21,3 @@ require_all(this_path)
 ---------------8<-------------------
 
 Diese Datei muss dann, wie im Artikel beschrieben, in den jeweils passenden Plugins-Ordner von Sketchup eingefügt werden.
-
-f den Pfad zu ändern, in dem die Beispiele liegen.
-
----------------8<-------------------
-# basisverzeichnis und lib zum load_path hinzufuegen
-this_path = 'C:/Dokumente und Einstellungen/jan/Eigene Dateien/Sketchup-Beispiele'
-$LOAD_PATH.unshift(this_path)
-$LO

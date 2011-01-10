@@ -288,14 +288,3 @@ unless file_loaded? File.basename(__FILE__)
   # von Hand ein- und ausblendbar)
   toolbar.show
 end
-
-file_loaded File.basename(__FILE__) 
- Toolbar-Icons
-  cmd.small_icon = File.join(File.dirname(__FILE__),'bilder','gewinde_klein.png')
-  cmd.large_icon = File.join(File.dirname(__FILE__),'bilder','gewinde.png')
-
-  # neue Toolbar für die Icons erzeugen
-  toolbar = UI::Toolbar.new "Formen"
-  # Icons hinzufügen
-  toolbar = toolbar.add_item cmd
-  # Toolbar anzeigen  (ist über das A
