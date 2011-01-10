@@ -2,9 +2,9 @@
 // Sketchup vollständig geladen ist.
 $(function() {
   
-  /* Debug-Log-Funktion. In dem HTML ist ein verstecktes Element vorhanden,
-  ** in das die Ausgaben ausgegeben werden. Durch das entfernen des Zeilen-
-  ** Kommentars in der nächsten Zeile werden die Ausgaben sichtbar
+  /* Debug-Log-Funktion. Im HTML-Code ist Element versteckt,
+  ** das die Ausgaben zeigt, wenn man den Zeilenkommentaf in der 
+  ** folgenden Zeile entfernt.
   */
   // $('#debug').show();
   var log = function(string, text) {
@@ -30,11 +30,11 @@ $(function() {
   };
 
   /* Validierungen für das Formular. Hier wird das Abschicken des Formulars
-  ** Mit Hilfe des submit-Events abgefangen und im Fehlerfall unterbunden
+  ** mit Hilfe des submit-Events abgefangen und im Fehlerfall unterbunden
   */ 
   $('#gewinde').submit(function(e) {
     var fehler = [];
-    // Zurücksetzen der Fehleranzeigen
+    // Fehleranzeigen zurücksetzen
     $("#fehler").html("");
     $('#gewinde input').removeClass("fehler");
     // Ist Innenradius eine Zahl?
@@ -69,7 +69,7 @@ $(function() {
       fehler.push("Flankenwinkel ist keine gültige Zahl oder fehlt");
       
     });
-    /* Überprüfung der minimal notwendigen Steigung bei gegebenem Öffnungswinkel
+    /* Überprüfung der minimal notwendigen Steigung bei gegebenem Öffnungswinkel.
     ** Der Tangens-Winkel entspricht dabei 90°  (bzw. 1/2 * PI im Bogenmaß) minus
     ** dem halben Öffnungswinkel.
     */

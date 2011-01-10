@@ -25,24 +25,24 @@ module Formen
       dialog.set_file(File.join(File.dirname(__FILE__), 'html', 'gewinde_formular.html'))
       # Dialog anzeigen
       dialog.show
-      # Callback für das ausfüllen der Vorgabe-Werte
+      # Callback fürs Ausfüllen der Vorgabe-Werte
       dialog.add_action_callback("gewinde_vorgaben_ausfuellen") do |dialog, parameter|
         dialog.execute_script("gewinde_vorgaben_ausfuellen(#{10},#{13},#{20},#{4},#{60})")
       end
-      # Callback für Abbrechen
+      # Callback fürs Abbrechen
       dialog.add_action_callback("gewinde_abbrechen") do |dialog, parameter|
         dialog.close
       end
       
       # Callback fürs Erstellen
       dialog.add_action_callback("gewinde_bauen") do |dialog, parameter|
-        # Auslesen der Werte aus dem Formular
+        # Werte aus dem Formular auslesen
         innenradius = dialog.get_element_value("innenradius").to_f
         aussenradius = dialog.get_element_value("aussenradius").to_f
         laenge = dialog.get_element_value("laenge").to_f
         steigung = dialog.get_element_value("steigung").to_f
         oeffnungswinkel = dialog.get_element_value("oeffnungswinkel").to_f
-        # Dialog schliessen
+        # Dialog schließen
         dialog.close
         # Gewinde erzeugen
         Gewinde.new(
@@ -71,9 +71,9 @@ module Formen
     end
     
     
-    # Durch die übergebenen Punkte-Arrays gehen und bei den punkten
-    # untere und obere extrema in jeweils ein array stecken,
-    # da diese das gewinde oben und unten abschließen
+    # Durch die übergebenen Punkte-Arrays gehen und bei den Punkten
+    # untere und obere Extrema in jeweils ein Array stecken,
+    # da diese das Gewinde oben und unten abschließen
     
     def sammle_start_und_endpunkte(*punkte_arrays)
       startpunkte = []
@@ -90,7 +90,7 @@ module Formen
       return [startpunkte, endpunkte]
     end
     
-    # Erzeugen der Polygone für die Abschlussflächen des Gewindes
+    # Polygone für die Abschlussflächen des Gewindes erzeugen
     def endflaeche(mittelpunkt, punkte)
       punkte.each_with_index do |punkte_index, i|
         second_index = (i + 1) % punkte.length
@@ -103,7 +103,7 @@ module Formen
       bedingtes_polygon(pt3, pt4, pt1)
     end
 
-    # Zeichnen der Flächen
+    # Flächen zeichnen
     def gewindeflaechen(innere_punkte, untere_punkte, obere_punkte)
       (innere_punkte.length - 1).times do |i|
 
@@ -128,34 +128,34 @@ module Formen
       end
     end
 
-    # Diese Methode ist natürlich eigentlich viel zu lang.
+    # Diese Methode ist eigentlich viel zu lang.
     # Allerdings sind so viele Laufvariablen im Spiel,
-    # dass ein Refactoring in kleine, übersichtliche
+    # dass die Aufteilung in kleine, übersichtliche
     # Methoden sehr schwierig ist. 
     
     def gewindepunkte
-      # konstanten für die weiteren Berechnungen
-      # Radiale Schrittweite pro Segment
+      # Konstanten für die weiteren Berechnungen anlegen
+      # radiale Schrittweite pro Segment
       schrittweite = 2 * Math::PI / ANZAHL_SEGMENTE
-      # Schrittweite in Z-Richtung pro segment
+      # Schrittweite in Z-Richtung pro Segment
       z_schrittweite = @steigung.to_f / ANZAHL_SEGMENTE
       # Dicke des Gewindes
       dicke = @aussenradius - @innenradius
       
       @einzelwinkel = (Math::PI / 2) - (@oeffnungswinkel / 360 * Math::PI)
-      # Vorberechnung des Tangens für den Öffnungswinkel
+      # Tangens für den Öffnungswinkel vorberechnen
       @tangens = Math::tan(@einzelwinkel)
 
-      # Differenz in Z-Richtung zwischen inneren und äusseren Punkten des
+      # Differenz in Z-Richtung zwischen inneren und äußeren Punkten des
       # Gewindes
       z_differenz = dicke / @tangens
             
       # Dicke des Stegs des Gewindes
       z_steg = @steigung - z_differenz
 
-      # zähler (der einfachheit halber bei -1 anfangend)
+      # Zähler (beginnt der Einfachheit halber bei -1)
       i = -1
-      # Arrays für die Punkte der drei reihen
+      # Arrays für die Punkte der drei Reihen
       innere_punkte = []
       obere_punkte = []
       untere_punkte = []
@@ -164,18 +164,17 @@ module Formen
       z = - (@steigung * 2)
       while z < (@laenge + (@steigung * 2))
 
-        # Weiterzählen
+        # weiterzählen
         i += 1
         z += z_schrittweite 
         
         # Winkel
         alpha = schrittweite * i
-        # Abspeichern der Radien um sie gleich für die Enden
+        # Radien speichern, um sie gleich für die Enden
         # des Gewindes korrigieren zu können
         oberer_radius = @innenradius + dicke
         unterer_radius = @innenradius + dicke
-        innenradius = @innenradius
-        
+        innenradius = @innenradius      
 
         # Z-Positionen der Punkte, noch ohne Korrektur für
         # die Enden des Gewindes
@@ -184,15 +183,15 @@ module Formen
         z_oben  = z + z_differenz        
         z_mitte = z
 
-        # Überspringen des Schritts, wenn Punkt unten oder oben aus dem Gewinde
-        # "herausfällt"
+        # Schritt überspringen, falls der Punkt 
+        # unten oder oben außerhalb des Gewindes liegt
         if z < 0 && z_oben < 0 && z_unten < 0 && z_unten + (z_differenz * ANZAHL_SEGMENTE) < 0
           next
         end
         
         # Korrektur der Punkte für oberen und unteren Gewinderand
         
-        # Unten
+        # unten
         if z_unten < 0
           z_unten = 0
           unterer_radius = @innenradius + ((z - z_unten) * @tangens)
@@ -201,7 +200,7 @@ module Formen
           z_unten = @laenge
         end
 
-        # Oben
+        # oben
         if z_oben > @laenge
           z_oben = @laenge
           oberer_radius = @innenradius + ((z_oben - z) * @tangens)
@@ -223,7 +222,6 @@ module Formen
         end
         
         # Punkte hinzufügen
-        # Innere Punkte
         innere_punkte << gewindepunkt(
           z_unten <= z_mitte && z_oben >= z_mitte && z_unten < @laenge && z_oben > 0 && innenradius >= @innenradius,
           alpha,
@@ -235,7 +233,7 @@ module Formen
           alpha,
           oberer_radius,
           z_oben
-        )
+        )        
         untere_punkte << gewindepunkt(
           z_mitte >= 0 && (z + z_differenz - (z_schrittweite * ANZAHL_SEGMENTE)) <= @laenge && unterer_radius >= @innenradius,
           alpha,
@@ -249,18 +247,18 @@ module Formen
     def baue_gewinde
       @gitter = Geom::PolygonMesh.new
       innere_punkte, untere_punkte, obere_punkte = gewindepunkte
-      # Punkte um den Zylinder zu schließen
+      # Punkte, um den Zylinder zu schließen
       startmittelpunkt = @gitter.add_point([0,0,0])
       endmittelpunkt = @gitter.add_point([0,0,@laenge])
       startpunkte, endpunkte = sammle_start_und_endpunkte(innere_punkte, untere_punkte, obere_punkte)
     
-      # Flaechen zeichnen
+      # Flächen zeichnen
       gewindeflaechen(innere_punkte, untere_punkte, obere_punkte)
       endflaeche(startmittelpunkt, startpunkte)
       endflaeche(endmittelpunkt, endpunkte)        
       
-      # Aus dem Mesh die Flächen erzeugen und zu der Komponentendefinition
-      # hinzufügen
+      # aus dem Gitter die Flächen erzeugen 
+      # und zu der Komponentendefinitionhinzufügen
       @definition.entities.add_faces_from_mesh(@gitter, 0)
       
     end
@@ -273,7 +271,7 @@ module Formen
 end
 
 unless file_loaded? File.basename(__FILE__) 
-  # ein Toolbar-Icon wird durch UI::Command definiert
+  # Toolbar-Icon wird durch UI::Command definiert
   cmd = UI::Command.new("Gewinde") do
    Formen::Gewinde.dialog
   end
@@ -292,3 +290,12 @@ unless file_loaded? File.basename(__FILE__)
 end
 
 file_loaded File.basename(__FILE__) 
+ Toolbar-Icons
+  cmd.small_icon = File.join(File.dirname(__FILE__),'bilder','gewinde_klein.png')
+  cmd.large_icon = File.join(File.dirname(__FILE__),'bilder','gewinde.png')
+
+  # neue Toolbar für die Icons erzeugen
+  toolbar = UI::Toolbar.new "Formen"
+  # Icons hinzufügen
+  toolbar = toolbar.add_item cmd
+  # Toolbar anzeigen  (ist über das A
